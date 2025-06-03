@@ -2,6 +2,7 @@ const { Client, GatewayIntentBits, Events, Partials } = require('discord.js');
 const cron = require('node-cron');
 const fetch = require('node-fetch');
 const http = require('http');
+const axios = require('axios');
 require('dotenv').config();
 
 const server = http.createServer((req, res) => {
@@ -179,20 +180,22 @@ async function verificarPendentes(userId) {
   await enviarMensagemPonto(user);
 }
 
+// Função para fazer self-ping
+async function keepAlive() {
+  try {
+    const url = process.env.RENDER_URL || 'https://mindponto-bot.onrender.com';
+    await axios.get(`${url}/health`);
+    console.log('Self-ping executado com sucesso');
+  } catch (error) {
+    console.error('Erro no self-ping:', error.message);
+  }
+}
+
 client.once(Events.ClientReady, () => {
   console.log(`bot logado como ${client.user?.tag}`);
   
-  // Add periodic health check to keep the connection alive
-  setInterval(async () => {
-    try {
-      const response = await fetch('http://localhost:3000/health');
-      if (!response.ok) {
-        console.error('Health check failed');
-      }
-    } catch (error) {
-      console.error('Error during health check:', error);
-    }
-  }, 30000); // Check every 30 seconds
+  // Schedule self-ping every 4 minutes
+  cron.schedule('*/4 * * * *', keepAlive);
   
   cron.schedule('0 0 * * *', () => {
     respondedUsers.clear();

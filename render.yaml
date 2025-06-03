@@ -13,5 +13,7 @@ services:
         sync: false
       - key: PORT
         value: 3000
+      - key: RENDER_URL
+        value: https://mindponto-bot.onrender.com
     healthCheckPath: /health
     autoDeploy: true 
