@@ -205,6 +205,52 @@ client.once(Events.ClientReady, () => {
 
 client.on(Events.MessageCreate, async (message) => {
   if (message.author.bot) return;
+  
+  // Comando de teste para o relatório
+  if (message.content === '!teste-relatorio') {
+    console.log('Teste manual do relatório iniciado');
+    try {
+      const hoje = new Date().toLocaleDateString('pt-BR');
+      let relatorio = `relatório diário de pontos (${hoje}) - TESTE\n\n`;
+
+      console.log('Buscando pontos do dia...');
+      const pontos = await buscarPontosDoDia();
+      console.log(`Pontos encontrados: ${pontos.length}`);
+
+      const guild = client.guilds.cache.first();
+      if (!guild) {
+        await message.reply('Erro: Nenhuma guild encontrada!');
+        return;
+      }
+
+      const membros = await guild.members.fetch();
+      membros.forEach(member => {
+        if (member.user.bot) return;
+        const ponto = pontos.find(p => p.user_id === member.id);
+        if (ponto) {
+          relatorio += `${member.user.username} - ${ponto.horario}\n`;
+        } else {
+          relatorio += `${member.user.username} - nao bateu ponto\n`;
+        }
+      });
+
+      await message.reply('Enviando relatório de teste...');
+      for (const id of RH_IDS) {
+        try {
+          const user = await client.users.fetch(id);
+          const dm = await user.createDM();
+          await dm.send(relatorio);
+          await message.reply(`Relatório enviado com sucesso para ${user.username}`);
+        } catch (err) {
+          await message.reply(`Erro ao enviar para ${id}: ${err.message}`);
+        }
+      }
+    } catch (error) {
+      await message.reply(`Erro no teste: ${error.message}`);
+    }
+    return;
+  }
+
   if (!message.channel.isDMBased()) return;
   
   const userId = message.author.id;
@@ -259,35 +305,54 @@ client.on(Events.PresenceUpdate, async (oldPresence, newPresence) => {
 });
 
 cron.schedule('30 14 * * 1-5', async () => { 
+  console.log('Iniciando geração do relatório...');
   const hoje = new Date().toLocaleDateString('pt-BR');
   let relatorio = `relatório diário de pontos (${hoje})\n\n`;
 
-  const pontos = await buscarPontosDoDia();
-  const guild = client.guilds.cache.first();
-  
-  if (!guild) return;
+  try {
+    console.log('Buscando pontos do dia...');
+    const pontos = await buscarPontosDoDia();
+    console.log(`Pontos encontrados: ${pontos.length}`);
 
-  const membros = await guild.members.fetch();
-
-  membros.forEach(member => {
-    if (member.user.bot) return;
-
-    const ponto = pontos.find(p => p.user_id === member.id);
-    if (ponto) {
-      relatorio += `${member.user.username} - ${ponto.horario}\n`;
-    } else {
-      relatorio += `${member.user.username} - nao bateu ponto\n`;
+    const guild = client.guilds.cache.first();
+    if (!guild) {
+      console.error('Nenhuma guild encontrada!');
+      return;
     }
-  });
+    console.log(`Guild encontrada: ${guild.name}`);
 
-  for (const id of RH_IDS) {
-    try {
-      const user = await client.users.fetch(id);
-      const dm = await user.createDM();
-      await dm.send(relatorio);
-    } catch (err) {
-      console.error(`erro ao enviar relatorio para ${id}:`, err);
+    console.log('Buscando membros...');
+    const membros = await guild.members.fetch();
+    console.log(`Total de membros encontrados: ${membros.size}`);
+
+    membros.forEach(member => {
+      if (member.user.bot) return;
+
+      const ponto = pontos.find(p => p.user_id === member.id);
+      if (ponto) {
+        relatorio += `${member.user.username} - ${ponto.horario}\n`;
+      } else {
+        relatorio += `${member.user.username} - nao bateu ponto\n`;
+      }
+    });
+
+    console.log('Relatório gerado:', relatorio);
+    console.log('IDs do RH para envio:', RH_IDS);
+
+    for (const id of RH_IDS) {
+      try {
+        console.log(`Tentando enviar relatório para ID: ${id}`);
+        const user = await client.users.fetch(id);
+        console.log(`Usuário encontrado: ${user.username}`);
+        const dm = await user.createDM();
+        await dm.send(relatorio);
+        console.log(`Relatório enviado com sucesso para ${user.username}`);
+      } catch (err) {
+        console.error(`Erro ao enviar relatório para ${id}:`, err);
+      }
     }
+  } catch (error) {
+    console.error('Erro ao gerar/enviar relatório:', error);
   }
 });
 
