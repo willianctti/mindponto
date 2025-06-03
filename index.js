@@ -1,7 +1,23 @@
 const { Client, GatewayIntentBits, Events, Partials } = require('discord.js');
 const cron = require('node-cron');
 const fetch = require('node-fetch');
+const http = require('http');
 require('dotenv').config();
+
+const server = http.createServer((req, res) => {
+  if (req.url === '/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'ok', uptime: process.uptime() }));
+  } else {
+    res.writeHead(404);
+    res.end();
+  }
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`Health check server running on port ${PORT}`);
+});
 
 const client = new Client({
   intents: [
@@ -165,6 +181,18 @@ async function verificarPendentes(userId) {
 
 client.once(Events.ClientReady, () => {
   console.log(`bot logado como ${client.user?.tag}`);
+  
+  // Add periodic health check to keep the connection alive
+  setInterval(async () => {
+    try {
+      const response = await fetch('http://localhost:3000/health');
+      if (!response.ok) {
+        console.error('Health check failed');
+      }
+    } catch (error) {
+      console.error('Error during health check:', error);
+    }
+  }, 30000); // Check every 30 seconds
   
   cron.schedule('0 0 * * *', () => {
     respondedUsers.clear();
