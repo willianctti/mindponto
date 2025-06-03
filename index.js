@@ -258,7 +258,7 @@ client.on(Events.PresenceUpdate, async (oldPresence, newPresence) => {
   }
 });
 
-cron.schedule('30 13 * * 1-5', async () => { 
+cron.schedule('30 14 * * 1-5', async () => { 
   const hoje = new Date().toLocaleDateString('pt-BR');
   let relatorio = `relatório diário de pontos (${hoje})\n\n`;
 
