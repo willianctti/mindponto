@@ -15,7 +15,7 @@ const server = http.createServer((req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
   console.log(`Health check server running on port ${PORT}`);
 });
@@ -183,9 +183,10 @@ async function verificarPendentes(userId) {
 // Função para fazer self-ping
 async function keepAlive() {
   try {
-    const url = process.env.RENDER_URL || 'https://mindponto-bot.onrender.com';
-    await axios.get(`${url}/health`);
-    console.log('Self-ping executado com sucesso');
+    const port = server.address().port;
+    const url = `http://localhost:${port}/health`;
+    await axios.get(url);
+    console.log(`Self-ping executado com sucesso na porta ${port}`);
   } catch (error) {
     console.error('Erro no self-ping:', error.message);
   }
@@ -194,8 +195,7 @@ async function keepAlive() {
 client.once(Events.ClientReady, () => {
   console.log(`bot logado como ${client.user?.tag}`);
   
-  // Schedule self-ping every 4 minutes
-  cron.schedule('*/4 * * * *', keepAlive);
+  setInterval(keepAlive, 30000);
   
   cron.schedule('0 0 * * *', () => {
     respondedUsers.clear();
